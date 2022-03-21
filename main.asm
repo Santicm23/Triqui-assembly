@@ -6,7 +6,7 @@
 	
 	#datos imprimir Matriz
 	borde: .asciiz "  +---+---+---+\n"
-	iCols:  .asciiz "    0   1   2  \n"
+	iCols: .asciiz "    0   1   2  \n"
 	sepFilas:  .asciiz "|"
 	
 	p1: .asciiz "o"
@@ -35,7 +35,7 @@
 .text
 	main: #Funcion principal
 		la $a3, matriz
-		li $s7, 1 #$s7 será el que guarde el turno de los jugadores
+		li $s7, 1 #$s7 serï¿½ el que guarde el turno de los jugadores
 		while:# Do while:
 			jal imprimirMenu
 			
@@ -64,6 +64,8 @@
 	
 	jugarLocal: #funcion para jugar en local
 		sw $ra, 0($sp)
+		li $s6, 0 # 0 = no terminado, 1 = terminado
+		addi $t8, $zero, 0
 		Lloop:
 			jal inputFila
 			move $t1, $v0
@@ -73,9 +75,13 @@
 			add $t1, $t1, $t2
 			mul $t1, $t1, dataSize
 			la $a0, ($s7)
+			jal verifCasilla
 			sw $a0, matriz($t1)
 			jal imprimirMatriz
 			jal cambiarTurno
+			addi $t8, $t8, 1
+			jal verifFin
+		beq $s6, 0, Lloop
 		lw $ra, 0($sp)
 	jr $ra
 
@@ -152,6 +158,22 @@
 			la $a0, p2
 			syscall
 		lw $ra, 8($sp)
+	jr $ra
+	
+	verifCasilla:
+		lw $t2, matriz($t1)
+		beq $t2, 0, finVerifCasilla
+		li $v0, 4
+		la $a0, errorRep
+		syscall
+		j Lloop
+		finVerifCasilla:
+	jr $ra
+	
+	verifFin:
+		blt $t8, 9, finVerifFin
+		li $s6, 1
+		finVerifFin:
 	jr $ra
 	
 	printSep:
