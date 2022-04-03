@@ -56,6 +56,7 @@
 				jal genRandNum
 				la $s7, ($a0) #$s7 sera el que guarde el turno de los jugadores
 				jal jugarLocal
+				jal reiniciarMatriz
 				j while
 			else2:
 
@@ -138,6 +139,15 @@
 		lw $ra, 4($sp)
 		
 	jr $ra #fin funcion imprimirMatriz
+	
+	reiniciarMatriz:
+		addi $t1, $zero, 0
+		li $a0, 5
+		reiniciarLoop:
+			sw $a0, matriz($t1)
+			addi $t1, $t1, dataSize
+		blt $t1, 36, reiniciarLoop
+	jr $ra
 	
 	verifCasilla:
 		lw $t2, matriz($t1)
