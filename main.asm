@@ -6,7 +6,7 @@
 	
 	#datos imprimir Matriz
 	borde: .asciiz "  +---+---+---+\n"
-	iCols:  .asciiz "    0   1   2  \n"
+	iCols: .asciiz "    0   1   2  \n"
 	sepFilas:  .asciiz "|"
 	
 	p1: .asciiz "o"
@@ -15,6 +15,11 @@
 	matriz: .word 5, 5, 5
 			.word 5, 5, 5
 			.word 5, 5, 5
+	
+	matrizPuntos: .word 0, 0, 0 #7 => 200, 9 => 75, 5 => 25, 11 => 10, 12 => 5.
+				  .word 0, 0, 0
+				  .word 0, 0, 0	
+	
 	.eqv size 3
 	.eqv dataSize 4
 	
@@ -72,12 +77,98 @@
 	li $v0, 10
 	syscall #Fin funcion principal
 	
+	jugarContraIA:
+		sw $ra, 0($sp)
+		li $s6, 0 # 0 = no terminado, 1 = terminado
+		addi $t8, $zero, 0
+		IAloop:
+			jal printTurno
+			
+			beq $s7, 2, jugador
+				#aqui juega la IA (7,9,5,11,12)
+				j finIA
+			jugador:
+				jal inputFila
+				move $t1, $v0
+				jal inputColumna
+				move $t2, $v0
+				mul $t1, $t1, size
+				add $t1, $t1, $t2
+				mul $t1, $t1, dataSize
+				la $a0, ($s7)
+				jal verifCasilla
+				sw $a0, matriz($t1)
+			
+			finIA:
+			
+			jal imprimirMatriz
+			addi $t8, $t8, 1
+			
+			jal verifVictoria
+			jal verifEmpate
+			
+			jal cambiarTurno
+		beq $s6, 0, IAloop
+		lw $ra, 0($sp)
+	jr $ra
+	
+	llenarPuntosIA:
+		sw $ra, 16($sp)
+	
+		addi $t9, $a3, 0
+		addi $t4, $zero, 0
+		
+		addi $t1, $zero, 0
+		IAFils:
+			jal verifFil
+			
+			addi $t4, $zero, 0
+			addi $t1, $t1, 12
+		blt $t1, 36, IAFils
+		
+		addi $t1, $zero, 0
+		IACols:
+			add $t9, $a3, $t1
+			jal verifCol
+			
+			addi $t4, $zero, 0
+			add $t1, $t1, dataSize
+		blt $t1, 12, IACols
+			
+		#Diag 1
+			addi $t9, $a3, 0
+			jal verifDiag1
+			
+			addi $t4, $zero, 0
+		
+		#Diag 2
+			addi $t9, $a3, 8
+			jal verifDiag2
+			
+			addi $t4, $zero, 0
+			
+		lw $ra, 16($sp)
+	jr $ra
+	
+	volreqT4:
+		beq $t4, 7, valor200
+		beq $t4, 9, valor75
+		beq $t4, 5, valor25
+		beq $t4, 11, valor10
+		beq $t4, 12, valor5
+		valor200:
+		valor75:
+		valor25:
+		valor10:
+		valor5:
+	jr $ra
+	
 	jugarLocal: #funcion para jugar en local
 		sw $ra, 0($sp)
-		jal printTurno
 		li $s6, 0 # 0 = no terminado, 1 = terminado
 		addi $t8, $zero, 0
 		Lloop:
+			jal printTurno
 			jal inputFila
 			move $t1, $v0
 			jal inputColumna
@@ -168,64 +259,36 @@
 		
 		addi $t1, $zero, 0
 		victFils:
-			addi $t3, $zero, 0
-			vict2Fils:
-				lw $t5, ($t9)
-				add $t4, $t4, $t5
-				add $t9, $t9, dataSize
-				addi $t3, $t3, 1
-			blt $t3, 3, vict2Fils
+			jal verifFil
 			
 			beq $t4, 3, vict
 			beq $t4, 6, vict
-			addi $t4, $zero, 0
 			addi $t1, $t1, 1
 		blt $t1, 3, victFils
 		
 		addi $t1, $zero, 0
 		victCols:
-			addi $t3, $zero, 0
 			add $t9, $a3, $t1
-			vict2Cols:
-				lw $t5, ($t9)
-				add $t4, $t4, $t5
-				addi $t9, $t9, 12
-				addi $t3, $t3, 1
-			blt $t3, 3, vict2Cols
+			jal verifCol
 			
 			beq $t4, 3, vict
 			beq $t4, 6, vict
-			addi $t4, $zero, 0
 			add $t1, $t1, dataSize
 		blt $t1, 12, victCols
 			
 		#Diag 1
-			addi $t1, $zero, 0
 			addi $t9, $a3, 0
-			vict1Diags:
-				lw $t5, ($t9)
-				add $t4, $t4, $t5
-				addi $t9, $t9, 16
-				addi $t1, $t1, 1
-			blt $t1, 3, vict1Diags
+			jal verifDiag1
 			
 			beq $t4, 3, vict
 			beq $t4, 6, vict
-			addi $t4, $zero, 0
 		
 		#Diag 2
-			addi $t3, $zero, 0
 			addi $t9, $a3, 8
-			vict2Diags:
-				lw $t5, ($t9)
-				add $t4, $t4, $t5
-				addi $t9, $t9, 8
-				addi $t3, $t3, 1
-			blt $t3, 3, vict2Diags
+			jal verifDiag2
 			
 			beq $t4, 3, vict
 			beq $t4, 6, vict
-			addi $t4, $zero, 0
 		
 		addi $s6, $zero, 0
 		j finVict
@@ -263,6 +326,52 @@
 		syscall
 		la $a0, mOp
 		syscall
+	jr $ra
+	
+	#Valor e
+	
+	verifFil:
+		addi $t4, $zero, 0
+		addi $t3, $zero, 0
+		loopFils:
+			lw $t5, ($t9)
+			add $t4, $t4, $t5
+			add $t9, $t9, dataSize
+			addi $t3, $t3, 1
+		blt $t3, 3, loopFils
+	jr $ra
+	
+	verifCol:
+		addi $t4, $zero, 0
+		addi $t3, $zero, 0
+		loopCol:
+			lw $t5, ($t9)
+			add $t4, $t4, $t5
+			addi $t9, $t9, 12
+			addi $t3, $t3, 1
+		blt $t3, 3, loopCol
+	jr $ra
+	
+	verifDiag1:
+		addi $t4, $zero, 0
+		addi $t3, $zero, 0
+		loopDiag1:
+			lw $t5, ($t9)
+			add $t4, $t4, $t5
+			addi $t9, $t9, 16
+			addi $t3, $t3, 1
+		blt $t3, 3, loopDiag1
+	jr $ra
+	
+	verifDiag2:
+		addi $t4, $zero, 0
+		addi $t3, $zero, 0
+		loopDiag2:
+			lw $t5, ($t9)
+			add $t4, $t4, $t5
+			addi $t9, $t9, 8
+			addi $t3, $t3, 1
+		blt $t3, 3, loopDiag2
 	jr $ra
 	
 	printChar: #funcion para imprimir el caracter correspondiente al valor de la matriz $a0 dado
