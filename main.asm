@@ -18,7 +18,7 @@
 	
 	matrizPuntos: .word 0, 0, 0 #7 => 200, 9 => 75, 5 => 25, 11 => 10, 12 => 5.
 				  .word 0, 0, 0
-				  .word 0, 0, 0	
+				  .word 0, 0, 0
 	
 	.eqv size 3
 	.eqv dataSize 4
@@ -45,6 +45,7 @@
 .text
 	main: #Funcion principal
 		la $a3, matriz
+		la $a2, matrizPuntos
 		while:# Do while:
 			jal imprimirMenu
 			
@@ -54,7 +55,8 @@
 			bne $t0, 1, else1 #Case 1: (jugar contra el computador)
 				jal genRandNum
 				la $s7, ($a0) #$s7 sera el que guarde el turno de los jugadores
-				jal imprimirMatriz
+				jal jugarContraIA
+				jal reiniciarMatriz
 				j while
 			else1:
 			bne $t0, 2, else2 #Case 2: (Jugar en local)
@@ -86,6 +88,8 @@
 			
 			beq $s7, 2, jugador
 				#aqui juega la IA (7,9,5,11,12)
+				jal llenarPuntosIA
+				jal turnoIA
 				j finIA
 			jugador:
 				jal inputFila
@@ -96,7 +100,7 @@
 				add $t1, $t1, $t2
 				mul $t1, $t1, dataSize
 				la $a0, ($s7)
-				jal verifCasilla
+				jal verifCasillaIA
 				sw $a0, matriz($t1)
 			
 			finIA:
@@ -112,55 +116,175 @@
 		lw $ra, 0($sp)
 	jr $ra
 	
+	turnoIA:
+		addi $t7, $a2, 0
+		addi $t3, $zero, 0
+		addi $t4, $zero, 0
+		lw $t6, matrizPuntos($t4)
+		loopTurnoIA:
+			lw $t5, ($t7)
+			ble $t5, $t6, lowerEq
+				addi $t4, $t3, 0
+				lw $t6, matrizPuntos($t4)
+			lowerEq:
+			addi $t7, $t7, dataSize
+			addi $t3, $t3, dataSize
+		blt $t3, 36, loopTurnoIA
+		
+		sw $s7, matriz($t4)
+	jr $ra
+	
 	llenarPuntosIA:
 		sw $ra, 16($sp)
-	
+		
+		jal reiniciarPuntos
+		
 		addi $t9, $a3, 0
-		addi $t4, $zero, 0
+		addi $t7, $zero, 0
 		
 		addi $t1, $zero, 0
 		IAFils:
 			jal verifFil
+			jal valorEqT4
+			jal llenarFilIA
 			
-			addi $t4, $zero, 0
-			addi $t1, $t1, 12
-		blt $t1, 36, IAFils
+			addi $t1, $t1, 1
+		blt $t1, 3, IAFils
 		
 		addi $t1, $zero, 0
 		IACols:
 			add $t9, $a3, $t1
+			addi $t7, $t1, 0
 			jal verifCol
+			jal valorEqT4
+			jal llenarColIA
 			
-			addi $t4, $zero, 0
 			add $t1, $t1, dataSize
 		blt $t1, 12, IACols
 			
 		#Diag 1
 			addi $t9, $a3, 0
 			jal verifDiag1
+			jal valorEqT4
+			jal llenarDiag1IA
 			
-			addi $t4, $zero, 0
-		
 		#Diag 2
 			addi $t9, $a3, 8
 			jal verifDiag2
-			
-			addi $t4, $zero, 0
+			jal valorEqT4
+			jal llenarDiag2IA
 			
 		lw $ra, 16($sp)
 	jr $ra
 	
-	volreqT4:
+	llenarFilIA:
+		addi $t3, $zero, 0
+		llenFil:
+			lw $t5, matriz($t7)
+			bne $t5, 5, finLlenFil
+				lw $t5, matrizPuntos($t7)
+				add $t5, $t5, $t4
+				sw $t5, matrizPuntos($t7)
+			finLlenFil:
+			add $t7, $t7, dataSize
+			addi $t3, $t3, 1
+		blt $t3, 3, llenFil
+	jr $ra
+	
+	llenarColIA:
+		addi $t3, $zero, 0
+		llenCol:
+			lw $t5, matriz($t7)
+			bne $t5, 5, finLlenCol
+				lw $t5, matrizPuntos($t7)
+				add $t5, $t5, $t4
+				sw $t5, matrizPuntos($t7)
+			finLlenCol:
+			addi $t7, $t7, 12
+			addi $t3, $t3, 1
+		blt $t3, 3, llenCol
+	jr $ra
+	
+	llenarDiag1IA:
+		sw $ra, 20($sp)
+		addi $t3, $zero, 0
+		addi $t7, $zero, 0
+		bne $t4, 25, llenarDiag1
+			jal diagEq25
+		j finLlenDiag1
+		llenarDiag1:
+			lw $t5, matriz($t7)
+			bne $t5, 5, finLlenDiag1
+				lw $t5, matrizPuntos($t7)
+				add $t5, $t5, $t4
+				sw $t5, matrizPuntos($t7)
+			finLlenDiag1:
+			addi $t7, $t7, 16
+			addi $t3, $t3, 1
+		blt $t3, 3, llenarDiag1
+		lw $ra, 20($sp)
+	jr $ra
+	
+	llenarDiag2IA:
+		sw $ra, 20($sp)
+		addi $t3, $zero, 0
+		addi $t7, $zero, 8
+		bne $t4, 25, llenarDiag2
+			jal diagEq25
+		j finLlenDiag2
+		llenarDiag2:
+			lw $t5, matriz($t7)
+			bne $t5, 5, finLlenDiag2
+				lw $t5, matrizPuntos($t7)
+				add $t5, $t5, $t4
+				sw $t5, matrizPuntos($t7)
+			finLlenDiag2:
+			addi $t7, $t7, 8
+			addi $t3, $t3, 1
+		blt $t3, 3, llenarDiag2
+		lw $ra, 20($sp)
+	jr $ra
+	
+	diagEq25:
+		addi $t7, $zero, 4
+		addi $t3, $zero, 0
+		loopEq25:
+			lw $t5, matriz($t7)
+			bne $t5, 5, finDiagEq
+				lw $t5, matrizPuntos($t7)
+				add $t5, $t5, $t4
+				sw $t5, matrizPuntos($t7)
+			finDiagEq:
+			addi $t7, $t7, 8
+			addi $t3, $t3, 1
+		blt $t3, 4, loopEq25
+	jr $ra
+	
+	valorEqT4:
 		beq $t4, 7, valor200
 		beq $t4, 9, valor75
 		beq $t4, 5, valor25
 		beq $t4, 11, valor10
 		beq $t4, 12, valor5
+		j defaultT4
 		valor200:
+			addi $t4, $zero, 200
+		j finVlrT4
 		valor75:
+			addi $t4, $zero, 75
+		j finVlrT4
 		valor25:
+			addi $t4, $zero, 25
+		j finVlrT4
 		valor10:
+			addi $t4, $zero, 10
+		j finVlrT4
 		valor5:
+			addi $t4, $zero, 5
+		j finVlrT4
+		defaultT4:
+			addi $t4, $zero, 0
+		finVlrT4:
 	jr $ra
 	
 	jugarLocal: #funcion para jugar en local
@@ -177,7 +301,7 @@
 			add $t1, $t1, $t2
 			mul $t1, $t1, dataSize
 			la $a0, ($s7)
-			jal verifCasilla
+			jal verifCasillaLocal
 			sw $a0, matriz($t1)
 			jal imprimirMatriz
 			addi $t8, $t8, 1
@@ -188,66 +312,6 @@
 			jal cambiarTurno
 		beq $s6, 0, Lloop
 		lw $ra, 0($sp)
-	jr $ra
-
-	imprimirMatriz: #funcion para imprimir la matriz actual
-		sw $ra, 4($sp)
-		
-		addi $t1, $zero, 0
-		addi $t9, $a3, 0
-		loop1:
-			li $v0, 4
-			jal printBorde
-			li $v0, 1
-			addi $a0, $t1, 0
-			syscall
-			li $v0, 4
-			jal printSpace
-			
-			addi $t2, $zero, 0
-			loop2:
-				jal printSep
-				jal printSpace
-				li $v0, 1
-				lw $a0, ($t9)
-				jal printChar
-				li $v0, 4
-				jal printSpace
-				add $t9, $t9, dataSize
-				addi $t2, $t2, 1
-			blt $t2, size, loop2
-			
-			jal printSep
-			jal printEndl
-			
-			addi $t1, $t1, 1
-		blt $t1, size, loop1
-		
-		jal printBorde
-		la $a0, iCols
-		syscall
-		
-		lw $ra, 4($sp)
-		
-	jr $ra #fin funcion imprimirMatriz
-	
-	reiniciarMatriz:
-		addi $t1, $zero, 0
-		li $a0, 5
-		reiniciarLoop:
-			sw $a0, matriz($t1)
-			addi $t1, $t1, dataSize
-		blt $t1, 36, reiniciarLoop
-	jr $ra
-	
-	verifCasilla:
-		lw $t2, matriz($t1)
-		beq $t2, 5, finVerifCasilla
-		li $v0, 4
-		la $a0, errorRep
-		syscall
-		j Lloop
-		finVerifCasilla:
 	jr $ra
 	
 	verifVictoria: #si la suma es 3 o 6
@@ -328,7 +392,142 @@
 		syscall
 	jr $ra
 	
-	#Valor e
+	imprimirMatriz: #funcion para imprimir la matriz actual
+		sw $ra, 4($sp)
+		
+		addi $t1, $zero, 0
+		addi $t9, $a3, 0
+		loop1:
+			li $v0, 4
+			jal printBorde
+			li $v0, 1
+			addi $a0, $t1, 0
+			syscall
+			li $v0, 4
+			jal printSpace
+			
+			addi $t2, $zero, 0
+			loop2:
+				jal printSep
+				jal printSpace
+				li $v0, 1
+				lw $a0, ($t9)
+				jal printChar
+				li $v0, 4
+				jal printSpace
+				add $t9, $t9, dataSize
+				addi $t2, $t2, 1
+			blt $t2, size, loop2
+			
+			jal printSep
+			jal printEndl
+			
+			addi $t1, $t1, 1
+		blt $t1, size, loop1
+		
+		jal printBorde
+		la $a0, iCols
+		syscall
+		
+		lw $ra, 4($sp)
+		
+	jr $ra #fin funcion imprimirMatriz
+	
+	imprimirMatrizPuntos: #funcion para imprimir la matriz actual
+		sw $ra, 4($sp)
+		
+		addi $t1, $zero, 0
+		addi $t7, $a2, 0
+		loopP1:
+			li $v0, 4
+			jal printBorde
+			li $v0, 1
+			addi $a0, $t1, 0
+			syscall
+			li $v0, 4
+			jal printSpace
+			
+			addi $t2, $zero, 0
+			loopP2:
+				jal printSep
+				jal printSpace
+				li $v0, 1
+				lw $a0, ($t7)
+				syscall
+				li $v0, 4
+				jal printSpace
+				add $t7, $t7, dataSize
+				addi $t2, $t2, 1
+			blt $t2, size, loopP2
+			
+			jal printSep
+			jal printEndl
+			
+			addi $t1, $t1, 1
+		blt $t1, size, loopP1
+		
+		jal printBorde
+		la $a0, iCols
+		syscall
+		
+		lw $ra, 4($sp)
+		
+	jr $ra #fin funcion imprimirMatriz
+	
+	reiniciarPuntos:
+		addi $t1, $zero, 0
+		addi $t9, $a3, 0
+		addi $t5, $zero, 8
+		reiniciarPuntosLoop:
+			li $a0, 1
+			lw $t7, ($t9)
+			bne $t7, 5, noPuntos
+				bne $t1, 16, noCentro
+					addi $a0, $a0, 1
+				noCentro:
+				div $t1, $t5
+				mfhi $t6
+				bne $t6, 0, lado
+					addi $a0, $a0, 1
+				lado:
+				sw $a0, matrizPuntos($t1)
+				j finIfPuntos
+			noPuntos:
+				sw $zero, matrizPuntos($t1)
+			finIfPuntos:
+			addi $t1, $t1, dataSize
+			addi $t9, $t9, dataSize
+		blt $t1, 36, reiniciarPuntosLoop
+	jr $ra
+	
+	reiniciarMatriz:
+		addi $t1, $zero, 0
+		li $a0, 5
+		reiniciarLoop:
+			sw $a0, matriz($t1)
+			addi $t1, $t1, dataSize
+		blt $t1, 36, reiniciarLoop
+	jr $ra
+	
+	verifCasillaLocal:
+		lw $t2, matriz($t1)
+		beq $t2, 5, finVerifCasillaLocal
+		li $v0, 4
+		la $a0, errorRep
+		syscall
+		j Lloop
+		finVerifCasillaLocal:
+	jr $ra
+	
+	verifCasillaIA:
+		lw $t2, matriz($t1)
+		beq $t2, 5, finVerifCasillaIA
+		li $v0, 4
+		la $a0, errorRep
+		syscall
+		j IAloop
+		finVerifCasillaIA:
+	jr $ra
 	
 	verifFil:
 		addi $t4, $zero, 0
