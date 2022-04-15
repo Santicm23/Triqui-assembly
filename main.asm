@@ -26,7 +26,8 @@
 	ingFpos: .asciiz "\nIngrese la fila\n"
 	ingCpos: .asciiz "\nIngrese la columna\n"
 	
-	turno: .asciiz "\nTurno del jugador "
+	turno: .asciiz "\nTurno del jugador: "
+	turnoCmp: .asciiz "\nTurno de la IA: "
 	
 	errorIng: .asciiz "\nError: Indice invalido\n"
 	errorRep: .asciiz "\nError: La casilla ya ha sido ingresada\n"
@@ -39,7 +40,7 @@
 	
 	mOp: .asciiz "\nIngrese la opcion: "
 	
-	victoria: .asciiz "\nGano el jugador "
+	victoria: .asciiz "\nGano el jugador: "
 	empate: .asciiz "\nEs un empate\n"
 
 .text
@@ -84,14 +85,15 @@
 		li $s6, 0 # 0 = no terminado, 1 = terminado
 		addi $t8, $zero, 0
 		IAloop:
-			jal printTurno
+			jal printTurnoIA
 			
 			beq $s7, 2, jugador
 				#aqui juega la IA (7,9,5,11,12)
 				jal llenarPuntosIA
 				jal turnoIA
 				j finIA
-			jugador:
+			jugador: #juega el jugador
+			jal imprimirMatriz
 				jal inputFila
 				move $t1, $v0
 				jal inputColumna
@@ -291,6 +293,9 @@
 		sw $ra, 0($sp)
 		li $s6, 0 # 0 = no terminado, 1 = terminado
 		addi $t8, $zero, 0
+		li $v0, 4
+		jal printEndl
+		jal imprimirMatriz
 		Lloop:
 			jal printTurno
 			jal inputFila
@@ -656,6 +661,22 @@
 		sw $ra, 12($sp)
 		li $v0, 4
 		la $a0, turno
+		syscall
+		la $a0, ($s7)
+		jal printChar
+		jal printEndl
+		lw $ra, 12($sp)
+	jr $ra
+	
+	printTurnoIA:
+		sw $ra, 12($sp)
+		li $v0, 4
+		beq $s7, 2, printJugador
+			la $a0, turnoCmp
+		j printMensaje
+		printJugador:
+			la $a0, turno
+		printMensaje:
 		syscall
 		la $a0, ($s7)
 		jal printChar
