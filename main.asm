@@ -1,4 +1,4 @@
-# / - + - + - / Triqui hecho por Michael Gonzales, Jose Manuel Rodriguez y Santiago Castro / - + - + - / #
+# / - + - + - / Triqui hecho por Michael Gonzalez, Jose Manuel Rodriguez y Santiago Castro / - + - + - / #
 
 .data
 	endl: .asciiz "\n"
@@ -16,7 +16,7 @@
 			.word 5, 5, 5
 			.word 5, 5, 5
 	
-	matrizPuntos: .word 0, 0, 0 #7 => 200, 9 => 75, 5 => 25, 11 => 10, 12 => 5.
+	matrizPuntos: .word 0, 0, 0 #7 => 200, 9 => 75, 5 => 25 (solo en la diagonal), 11 => 10, 12 => 5.
 				  .word 0, 0, 0
 				  .word 0, 0, 0
 	
@@ -84,6 +84,7 @@
 		sw $ra, 0($sp)
 		li $s6, 0 # 0 = no terminado, 1 = terminado
 		addi $t8, $zero, 0
+		jal imprimirMatriz
 		IAloop:
 			jal printTurnoIA
 			
@@ -93,7 +94,6 @@
 				jal turnoIA
 				j finIA
 			jugador: #juega el jugador
-			jal imprimirMatriz
 				jal inputFila
 				move $t1, $v0
 				jal inputColumna
@@ -104,7 +104,6 @@
 				la $a0, ($s7)
 				jal verifCasillaIA
 				sw $a0, matriz($t1)
-			
 			finIA:
 			
 			jal imprimirMatriz
@@ -118,7 +117,7 @@
 		lw $ra, 0($sp)
 	jr $ra
 	
-	turnoIA:
+	turnoIA: #funcion que a partir de la matriz de puntos toma la mejor jugada
 		addi $t7, $a2, 0
 		addi $t3, $zero, 0
 		addi $t4, $zero, 0
@@ -248,6 +247,9 @@
 	jr $ra
 	
 	diagEq25:
+		addi $t6, $zero, 16
+		lw $t6, matriz($t6)
+		beq $t6, 2, finDiagEq25
 		addi $t7, $zero, 4
 		addi $t3, $zero, 0
 		loopEq25:
@@ -260,6 +262,7 @@
 			addi $t7, $t7, 8
 			addi $t3, $t3, 1
 		blt $t3, 4, loopEq25
+		finDiagEq25:
 	jr $ra
 	
 	valorEqT4:
